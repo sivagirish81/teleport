@@ -180,27 +180,25 @@ func joinViaProxy(ctx context.Context, params JoinParams, proxyAddr string) (*Jo
 		},
 	)
 	if err != nil {
-		return nil, &connectionError{trace.Wrap(err, proxyJoinErrorHint(proxyAddr))}
+		errMsg := fmt.Sprintf("building proxy client using %s", proxyAddr)
+		if hint := authjoin.ProxyServerHTTPListenPortHint(proxyAddr); hint != "" {
+			errMsg += ". " + hint
+		}
+		return nil, &connectionError{trace.Wrap(err, errMsg)}
 	}
 	defer conn.Close()
 	result, err := joinWithClient(ctx, params, joinv1.NewClientFromConn(conn))
 	if err != nil {
 		if isConnectionError(err) {
-			return nil, &connectionError{trace.Wrap(err, proxyJoinErrorHint(proxyAddr))}
+			errMsg := fmt.Sprintf("building proxy client using %s", proxyAddr)
+			if hint := authjoin.ProxyServerHTTPListenPortHint(proxyAddr); hint != "" {
+				errMsg += ". " + hint
+			}
+			return nil, &connectionError{trace.Wrap(err, errMsg)}
 		}
 		return nil, trace.Wrap(err)
 	}
 	return result, nil
-}
-
-// proxyJoinErrorHint augments connection errors when building the join client to
-// the proxy. See authjoin.ProxyServerHTTPListenPortHint for when the :443 hint applies.
-func proxyJoinErrorHint(proxyAddr string) string {
-	short := fmt.Sprintf("building proxy client using %s", proxyAddr)
-	if hint := authjoin.ProxyServerHTTPListenPortHint(proxyAddr); hint != "" {
-		return short + ". " + hint
-	}
-	return short
 }
 
 func joinViaAuth(ctx context.Context, params JoinParams) (*JoinResult, error) {
