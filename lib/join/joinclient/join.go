@@ -23,14 +23,11 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"net"
 	"os"
-	"strconv"
 
 	"github.com/gravitational/trace"
 	"golang.org/x/crypto/ssh"
 
-	"github.com/gravitational/teleport"
 	"github.com/gravitational/teleport/api/client/proto"
 	joiningv1 "github.com/gravitational/teleport/api/gen/proto/go/teleport/scopes/joining/v1"
 	"github.com/gravitational/teleport/api/types"
@@ -38,7 +35,6 @@ import (
 	proxyinsecureclient "github.com/gravitational/teleport/lib/client/proxy/insecure"
 	"github.com/gravitational/teleport/lib/cloud/imds/gcp"
 	"github.com/gravitational/teleport/lib/cryptosuites"
-	"github.com/gravitational/teleport/lib/defaults"
 	"github.com/gravitational/teleport/lib/join/azuredevops"
 	"github.com/gravitational/teleport/lib/join/bitbucket"
 	"github.com/gravitational/teleport/lib/join/circleci"
@@ -197,19 +193,14 @@ func joinViaProxy(ctx context.Context, params JoinParams, proxyAddr string) (*Jo
 	return result, nil
 }
 
+// proxyJoinErrorHint augments connection errors when building the join client to
+// the proxy. See authjoin.ProxyServerHTTPListenPortHint for when the :443 hint applies.
 func proxyJoinErrorHint(proxyAddr string) string {
-	host, port, err := net.SplitHostPort(proxyAddr)
-	if err == nil && port == strconv.Itoa(defaults.HTTPListenPort) {
-		return fmt.Sprintf(
-			"building proxy client using %s. If %d is blocked or unreachable, set proxy_server to %s:%d",
-			proxyAddr,
-			defaults.HTTPListenPort,
-			host,
-			teleport.StandardHTTPSPort,
-		)
+	short := fmt.Sprintf("building proxy client using %s", proxyAddr)
+	if hint := authjoin.ProxyServerHTTPListenPortHint(proxyAddr); hint != "" {
+		return short + ". " + hint
 	}
-
-	return fmt.Sprintf("building proxy client using %s", proxyAddr)
+	return short
 }
 
 func joinViaAuth(ctx context.Context, params JoinParams) (*JoinResult, error) {
