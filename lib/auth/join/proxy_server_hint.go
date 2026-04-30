@@ -35,11 +35,11 @@ import (
 func ProxyServerHTTPListenPortHint(proxyAddr string) string {
 	host, portStr, splitErr := net.SplitHostPort(proxyAddr)
 	if splitErr == nil && portStr == strconv.Itoa(defaults.HTTPListenPort) {
+		httpsAddr := net.JoinHostPort(host, strconv.Itoa(teleport.StandardHTTPSPort))
 		return fmt.Sprintf(
-			"If %d is blocked or unreachable, set proxy_server to %s:%d",
+			"If %d is blocked or unreachable, set proxy_server to %s",
 			defaults.HTTPListenPort,
-			host,
-			teleport.StandardHTTPSPort,
+			httpsAddr,
 		)
 	}
 	if splitErr != nil {
@@ -47,11 +47,11 @@ func ProxyServerHTTPListenPortHint(proxyAddr string) string {
 		if na.Port(defaults.HTTPListenPort) == defaults.HTTPListenPort {
 			h := na.Host()
 			if strings.HasSuffix(h, "."+defaults.CloudDomainSuffix) {
+				httpsAddr := net.JoinHostPort(h, strconv.Itoa(teleport.StandardHTTPSPort))
 				return fmt.Sprintf(
-					"If %d is blocked or unreachable, set proxy_server to %s:%d",
+					"If %d is blocked or unreachable, set proxy_server to %s",
 					defaults.HTTPListenPort,
-					h,
-					teleport.StandardHTTPSPort,
+					httpsAddr,
 				)
 			}
 		}
